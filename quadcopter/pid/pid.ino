@@ -4,7 +4,7 @@
 #include "Kalman.h" // Source: https://github.com/TKJElectronics/KalmanFilter
 #include <PID_v1.h>
 #include<Servo.h>	
-double KP = 1000, KI = 5, KD = 1;
+double KP = 2, KI = 5, KD = 1;
 double Setpoint = 0, Input, Output;
 PID myPID(&Input, &Output, &Setpoint,KP,KI,KD, DIRECT);
 
@@ -60,6 +60,7 @@ D.attach(_motor_D);
 timer = micros();
 minusX = getXAngle();
 minusY = getYAngle();
+myPID.SetSampleTime(1);
 myPID.SetOutputLimits(minSpeed, minSpeed + 20);
 ///////////////////////////////////////////////
 //good to go
@@ -73,8 +74,9 @@ void loop() {
   kalAngleX = minusX - getXAngle();
   kalAngleY = minusY - getYAngle();
   Input = kalAngleX;
-  
-  Serial.println(myPID.Compute());
+  myPID.Compute();
+  Serial.println(Output);
+  delay(10);
 }
 
 
