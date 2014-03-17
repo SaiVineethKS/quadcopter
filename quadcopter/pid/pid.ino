@@ -4,7 +4,7 @@
 #include "Kalman.h" // Source: https://github.com/TKJElectronics/KalmanFilter
 #include <PID_v1.h>
 #include<Servo.h>	
-double KP = 2, KI = 5, KD = 1;
+double KP = 1000, KI = 5, KD = 1;
 double Setpoint = 0, Input, Output;
 PID myPID(&Input, &Output, &Setpoint,KP,KI,KD, DIRECT);
 
