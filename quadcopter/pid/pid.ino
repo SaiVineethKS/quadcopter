@@ -60,7 +60,7 @@ D.attach(_motor_D);
 timer = micros();
 minusX = getXAngle();
 minusY = getYAngle();
-myPID.SetOutputLimits(minSpeed, minSpeed + 20);
+//myPID.SetOutputLimits(minSpeed, minSpeed + 20);
 ///////////////////////////////////////////////
 //good to go
 arm();
