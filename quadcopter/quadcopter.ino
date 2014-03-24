@@ -3,7 +3,7 @@
 
 
 #define mistakeRange 0 //orig:3 this is d!!!
-#define change 20 //Bigger less change original:4 this is p!!! 20 40
+#define change 40 //Bigger less change original:4 this is p!!! 20 40
 #include<Servo.h>	
 int res=20;
 int _motor_A = 5;
@@ -48,16 +48,16 @@ void setup() {
  average();
  errorX = 180;
  errorY = 180;
+ arm();
+timer = micros();
 ///////////////////////////////////////////////
 //good to go
-arm();
-timer = micros();
-pid(2.5, 21.5500, 0, 0);
+pid(1.3, 23.5500, 0, 0);
 turnOff();
 }
 
 void loop() {
- 
+ Serial.println(getHight());
 }
 
 void average()
@@ -292,4 +292,31 @@ Serial.println(i);
 delay(10);
 
 }
+}
+
+
+
+long getHight(){
+  long duration, inches, cm;
+ 
+  // The sensor is triggered by a HIGH pulse of 10 or more microseconds.
+  // Give a short LOW pulse beforehand to ensure a clean HIGH pulse:
+  pinMode(11, OUTPUT);
+  digitalWrite(11, LOW);
+  delayMicroseconds(2);
+  digitalWrite(11, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(11, LOW);
+ 
+  // Read the signal from the sensor: a HIGH pulse whose
+  // duration is the time (in microseconds) from the sending
+  // of the ping to the reception of its echo off of an object.
+  pinMode(10, INPUT);
+  duration = pulseIn(10, HIGH);
+ 
+  // convert the time into a distance
+ // inches = microsecondsToInches(duration);
+  cm = duration / 29 / 2;
+  delay(10);
+ return cm; 
 }
