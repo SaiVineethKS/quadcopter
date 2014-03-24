@@ -3,7 +3,7 @@
 
 
 #define mistakeRange 0 //orig:3 this is d!!!
-#define change 40 //Bigger less change original:4 this is p!!! 20
+#define change 20 //Bigger less change original:4 this is p!!! 20 40
 #include<Servo.h>	
 int res=20;
 int _motor_A = 5;
@@ -20,15 +20,11 @@ int _ultraSonicD_E = A0;
 int _ultraSonicD_T = A1;
 int _ultraSonicDown_E = A2;
 int _ultraSonicDown_T = A3;
-double minSpeed = 24.5500; // Max Battery Life- to hover about 23.5
-double time = 2.5/(res/4);
 Servo A;
 Servo B;
 Servo C;
 Servo D;
 
-
-int i = 0;
 
 Kalman kalmanX; // Create the Kalman instances
 Kalman kalmanY;
@@ -43,152 +39,25 @@ double temp; // Temperature
 double gyroXangle, gyroYangle; // Angle calculate using the gyro
 double compAngleX, compAngleY; // Calculate the angle using a complementary filter
 double kalAngleX, kalAngleY; // Calculate the angle using a Kalman filter
-
+double errorX, errorY;
 uint32_t timer;
 uint8_t i2cData[14]; // Buffer for I2C data
 
 void setup() {
-  
-Serial.begin(115200);
-Wire.begin();
-TWBR = ((F_CPU / 400000L) - 16) / 2; // Set I2C frequency to 400kHz
-
-i2cData[0] = 7; // Set the sample rate to 1000Hz - 8kHz/(7+1) = 1000Hz
-i2cData[1] = 0x00; // Disable FSYNC and set 260 Hz Acc filtering, 256 Hz Gyro filtering, 8 KHz sampling
-i2cData[2] = 0x00; // Set Gyro Full Scale Range to ±250deg/s
-i2cData[3] = 0x00; // Set Accelerometer Full Scale Range to ±2g
-while (i2cWrite(0x19, i2cData, 4, false)); // Write to all four registers at once
-while (i2cWrite(0x6B, 0x01, true)); // PLL with X axis gyroscope reference and disable sleep mode
-
-while (i2cRead(0x75, i2cData, 1));
-if (i2cData[0] != 0x68) { // Read "WHO_AM_I" register
-Serial.print(F("Error reading sensor"));
-while (1);
-}
-
-delay(100); // Wait for sensor to stabilize
-
-/* Set kalman and gyro starting angle */
-while (i2cRead(0x3B, i2cData, 6));
-accX = ((i2cData[0] << 8) | i2cData[1]);
-accY = ((i2cData[2] << 8) | i2cData[3]);
-accZ = ((i2cData[4] << 8) | i2cData[5]);
-// atan2 outputs the value of -π to π (radians) - see http://en.wikipedia.org/wiki/Atan2
-// We then convert it to 0 to 2π and then from radians to degrees
-accYangle = (atan2(accX, accZ) + PI) * RAD_TO_DEG;
-accXangle = (atan2(accY, accZ) + PI) * RAD_TO_DEG;
-
-kalmanX.setAngle(accXangle); // Set starting angle
-kalmanY.setAngle(accYangle);
-gyroXangle = accXangle;
-gyroYangle = accYangle;
-compAngleX = accXangle;
-compAngleY = accYangle;
-A.attach(_motor_A);
-B.attach(_motor_B);
-C.attach(_motor_C);
-D.attach(_motor_D);
+ initStuff();
+ average();
+ errorX = 180;
+ errorY = 180;
 ///////////////////////////////////////////////
 //good to go
 arm();
 timer = micros();
-
+pid(2.5, 21.5500, 0, 0);
+turnOff();
 }
 
 void loop() {
  
-average();
-kalAngleX = 180 - kalAngleX;
-kalAngleY = 180 - kalAngleY;
-
-Serial.print(kalAngleX); Serial.print("\t");
-
-Serial.print("\t");
-
-Serial.print(kalAngleY); Serial.print("\t");
-double a = minSpeed+(kalAngleY/change);//What the motor speeds will be with angles applyied
-double b = minSpeed+(kalAngleX/change);
-double c = minSpeed+(kalAngleY/change);
-double d = minSpeed+(kalAngleX/change);
-if (a > minSpeed+mistakeRange){
-
-c = minSpeed+abs(kalAngleY/change);
-
-
-a = minSpeed+abs(kalAngleY/change);
-}else if(a > minSpeed-mistakeRange && a < minSpeed+mistakeRange){
-  a = minSpeed;
-  
-  c = minSpeed;
-  
-}else {
-a = minSpeed+abs(kalAngleY/change);
-
-c = minSpeed;
-
-}
-
-if (d > minSpeed+mistakeRange){
-b = minSpeed+abs(kalAngleX/change);
-
-d = minSpeed-abs(kalAngleX/change);
-
-}else if(d > minSpeed-mistakeRange && d < minSpeed+mistakeRange){
-b = minSpeed;
-
-d = minSpeed;
-
-}else{
-d = minSpeed+abs(kalAngleX/change);
-
-b = minSpeed-abs(kalAngleX/change);
-
-}
-if(a<20){
-  a = 20;
-}
-if(b<20){
-  b = 20;
-}
-if(c<20){
-  c = 20;
-}
-if(d<20){
-  d = 20;
-}
-
-Serial.print("A:");
-Serial.print(a);Serial.print("\t");
-writeA(a);
-Serial.print("B:");
-Serial.print(b);Serial.print("\t");
-writeB(b);
-Serial.print("C:");
-Serial.print(c);Serial.print("\t");
-writeC(c);
-Serial.print("D:");
-Serial.print(d);Serial.println("\t");
-writeD(d);
-//Serial.print(temp);Serial.print("\t");
-
-  
-//minSpeed-=(1.0/time*(minSpeed-20)/100.0);//Decreases the motors speed in relation to time and minSpeed
-
-i++;
-
-
-
-/*Serial.print("minSpeed: ");
-Serial.println(minSpeed);*/
-Serial.println(i);
-delay(10);
-
-if(i >= time*100){
-  turnOff();
- while(true){
-   //Serial.println("end");
- } 
-}
 }
 
 void average()
@@ -241,6 +110,8 @@ kalAngleY = kalmanY.getAngle(accYangle, gyroYrate, (double)(micros() - timer) / 
 timer = micros();
 
 temp = ((double)tempRaw + 12412.0) / 340.0;
+kalAngleX = kalAngleX - errorX;
+kalAngleY = kalAngleY - errorY;
 }
 
 
@@ -299,4 +170,126 @@ C.writeMicroseconds(speed*5+1500);
 void writeD(float speed)
 {
 D.writeMicroseconds(speed*5+1500);
+}
+
+void initStuff(){
+ 
+Serial.begin(115200);
+Wire.begin();
+TWBR = ((F_CPU / 400000L) - 16) / 2; // Set I2C frequency to 400kHz
+
+i2cData[0] = 7; // Set the sample rate to 1000Hz - 8kHz/(7+1) = 1000Hz
+i2cData[1] = 0x00; // Disable FSYNC and set 260 Hz Acc filtering, 256 Hz Gyro filtering, 8 KHz sampling
+i2cData[2] = 0x00; // Set Gyro Full Scale Range to ±250deg/s
+i2cData[3] = 0x00; // Set Accelerometer Full Scale Range to ±2g
+while (i2cWrite(0x19, i2cData, 4, false)); // Write to all four registers at once
+while (i2cWrite(0x6B, 0x01, true)); // PLL with X axis gyroscope reference and disable sleep mode
+
+while (i2cRead(0x75, i2cData, 1));
+if (i2cData[0] != 0x68) { // Read "WHO_AM_I" register
+Serial.print(F("Error reading sensor"));
+while (1);
+}
+
+delay(100); // Wait for sensor to stabilize
+
+/* Set kalman and gyro starting angle */
+while (i2cRead(0x3B, i2cData, 6));
+accX = ((i2cData[0] << 8) | i2cData[1]);
+accY = ((i2cData[2] << 8) | i2cData[3]);
+accZ = ((i2cData[4] << 8) | i2cData[5]);
+// atan2 outputs the value of -π to π (radians) - see http://en.wikipedia.org/wiki/Atan2
+// We then convert it to 0 to 2π and then from radians to degrees
+accYangle = (atan2(accX, accZ) + PI) * RAD_TO_DEG;
+accXangle = (atan2(accY, accZ) + PI) * RAD_TO_DEG;
+
+kalmanX.setAngle(accXangle); // Set starting angle
+kalmanY.setAngle(accYangle);
+gyroXangle = accXangle;
+gyroYangle = accYangle;
+compAngleX = accXangle;
+compAngleY = accYangle;
+A.attach(_motor_A);
+B.attach(_motor_B);
+C.attach(_motor_C);
+D.attach(_motor_D);
+}
+
+
+
+
+void pid(double time, double minSpeed, double xAngle,double yAngle){
+  time = time/(res/4);
+ for(int i = 0;i <= time*100 ;i++){
+average();
+//kalAngleX = errorX - kalAngleX;
+//kalAngleY = errorY - kalAngleY;
+
+double a = minSpeed+(kalAngleY/change);//What the motor speeds will be with angles applyied
+double b = minSpeed+(kalAngleX/change);
+double c = minSpeed+(kalAngleY/change);
+double d = minSpeed+(kalAngleX/change);
+if (kalAngleY > yAngle){
+
+c = minSpeed-abs(abs(kalAngleY-yAngle)/change);
+
+
+a = minSpeed+abs(abs(kalAngleY-yAngle)/change);
+}else {
+a = minSpeed-abs(abs(kalAngleY-yAngle)/change);
+
+c = minSpeed+abs(abs(kalAngleY-yAngle)/change);
+
+}
+
+if (kalAngleX > xAngle){
+b = minSpeed-abs(abs(kalAngleX-xAngle)/change);
+
+d = minSpeed+abs(abs(kalAngleX-xAngle)/change);
+
+}else{
+d = minSpeed-abs(abs(kalAngleX-xAngle)/change);
+
+b = minSpeed+abs(abs(kalAngleX-xAngle)/change);
+
+}
+if(a<20){
+  a = 20;
+}
+if(b<20){
+  b = 20;
+}
+if(c<20){
+  c = 20;
+}
+if(d<20){
+  d = 20;
+}
+
+Serial.print("A:");
+Serial.print(a);Serial.print("\t");
+writeA(a);
+Serial.print("B:");
+Serial.print(b);Serial.print("\t");
+writeB(b);
+Serial.print("C:");
+Serial.print(c);Serial.print("\t");
+writeC(c);
+Serial.print("D:");
+Serial.print(d);Serial.println("\t");
+writeD(d);
+//Serial.print(temp);Serial.print("\t");
+
+  
+//minSpeed-=(1.0/time*(minSpeed-20)/100.0);//Decreases the motors speed in relation to time and minSpeed
+
+
+
+
+/*Serial.print("minSpeed: ");
+Serial.println(minSpeed);*/
+Serial.println(i);
+delay(10);
+
+}
 }
