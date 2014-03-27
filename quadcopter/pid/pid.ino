@@ -1,12 +1,12 @@
-
 #include <Wire.h>
 #include "Kalman.h" // Source: https://github.com/TKJElectronics/KalmanFilter
 #include <PID_v1.h>
 #include<Servo.h>	
-double KP = 1, KI = 0.1, KD = 0.11;
+double KP = 0.08, KI = 0.001, KD = 0.000000001;
 double Setpoint = 0, Input, Output;
+double Setpoint1 = 0, Input1, Output1;
 PID myPID(&Input, &Output, &Setpoint,KP,KI,KD, DIRECT);
-
+PID myPID1(&Input1, &Output1, &Setpoint1,KP,KI,KD, DIRECT);
 int _motor_A = 5;
 int _motor_B = 3;
 int _motor_C = 9;
@@ -51,6 +51,7 @@ uint8_t i2cData[14]; // Buffer for I2C data
 void setup() {
   Serial.begin(115200);
   myPID.SetMode(AUTOMATIC);
+  myPID1.SetMode(AUTOMATIC);
   initSensors();
 A.attach(_motor_A);
 B.attach(_motor_B);
@@ -60,21 +61,58 @@ timer = micros();
 minusX = getXAngle();
 minusY = getYAngle();
 myPID.SetSampleTime(10);
-myPID.SetOutputLimits(minSpeed, minSpeed + 20);
+myPID.SetOutputLimits(25, minSpeed + 20);
+myPID1.SetSampleTime(10);
+myPID1.SetOutputLimits(25, minSpeed + 20);
 ///////////////////////////////////////////////
 //good to go
 arm();
+
 
 }
 
 void loop() {
   /* Update all the values */
-  
-  kalAngleX = minusX - getXAngle();
-  kalAngleY = minusY - getYAngle();
+  average();
   Input = kalAngleX;
+  Serial.print(Input);
+  if (Input < 0){
   myPID.Compute();
-  Serial.println(Output);
+  Serial.print(Output);
+  writeB(Output);
+  Serial.print("    ");
+  Serial.println(25-abs(Output-25));
+  writeD(25-abs(Output-25));
+  }else{
+    Input = Input - 2 * Input;
+    myPID.Compute();
+  Serial.print(25-abs(Output-25));
+  writeB(25-abs(Output-25));
+  Serial.print("    ");
+  Serial.print(Output);
+  Serial.print("    ");
+  writeD(Output);
+  }
+  Input1 = kalAngleY;
+  Serial.print(Input1);
+  if (Input1 < 0){
+  myPID1.Compute();
+  Serial.print(Output1);
+  writeC(Output1);
+  Serial.print("    ");
+  Serial.println(25-abs(Output1-25));
+  writeA(25-abs(Output1-25));
+  }else{
+    Input1 = Input1 - 2 * Input1;
+    myPID1.Compute();
+  Serial.print(25-abs(Output1-25));
+  writeC(25-abs(Output1-25));
+  Serial.print("    ");
+  Serial.println(Output1);
+  writeA(Output1);
+  }
+  
+  
   delay(10);
 }
 
@@ -236,4 +274,54 @@ void initSensors(){
   gyroYangle = accYangle;
   compAngleX = accXangle;
   compAngleY = accYangle; 
+}
+void average()
+{
+  
+  int sumX = 0;
+  int sumY = 0;
+  for(int c=0;c<20;c++)
+  {
+    updateAngles();
+    sumX+= kalAngleX;
+    sumY+= kalAngleY;
+  }
+  kalAngleX = sumX / 20;
+  kalAngleY = sumY / 20;
+
+}
+void updateAngles()
+{
+  /* Update all the values */
+while (i2cRead(0x3B, i2cData, 14));
+accX = ((i2cData[0] << 8) | i2cData[1]);
+accY = ((i2cData[2] << 8) | i2cData[3]);
+accZ = ((i2cData[4] << 8) | i2cData[5]);
+tempRaw = ((i2cData[6] << 8) | i2cData[7]);
+gyroX = ((i2cData[8] << 8) | i2cData[9]);
+gyroY = ((i2cData[10] << 8) | i2cData[11]);
+gyroZ = ((i2cData[12] << 8) | i2cData[13]);
+
+// atan2 outputs the value of -π to π (radians) - see http://en.wikipedia.org/wiki/Atan2
+// We then convert it to 0 to 2π and then from radians to degrees
+accXangle = (atan2(accY, accZ) + PI) * RAD_TO_DEG;
+accYangle = (atan2(accX, accZ) + PI) * RAD_TO_DEG;
+
+double gyroXrate = (double)gyroX / 131.0;
+double gyroYrate = -((double)gyroY / 131.0);
+gyroXangle += gyroXrate * ((double)(micros() - timer) / 1000000); // Calculate gyro angle without any filter
+gyroYangle += gyroYrate * ((double)(micros() - timer) / 1000000);
+//gyroXangle += kalmanX.getRate()*((double)(micros()-timer)/1000000); // Calculate gyro angle using the unbiased rate
+//gyroYangle += kalmanY.getRate()*((double)(micros()-timer)/1000000);
+
+compAngleX = (0.93 * (compAngleX + (gyroXrate * (double)(micros() - timer) / 1000000))) + (0.07 * accXangle); // Calculate the angle using a Complimentary filter
+compAngleY = (0.93 * (compAngleY + (gyroYrate * (double)(micros() - timer) / 1000000))) + (0.07 * accYangle);
+
+kalAngleX = kalmanX.getAngle(accXangle, gyroXrate, (double)(micros() - timer) / 1000000); // Calculate the angle using a Kalman filter
+kalAngleY = kalmanY.getAngle(accYangle, gyroYrate, (double)(micros() - timer) / 1000000);
+timer = micros();
+
+temp = ((double)tempRaw + 12412.0) / 340.0;
+kalAngleX = kalAngleX - 180;
+kalAngleY = kalAngleY - 180;
 }
