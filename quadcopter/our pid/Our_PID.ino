@@ -50,11 +50,11 @@ void setup() {
  average();
  errorX = 180;
  errorY = 180;
- //arm();
+ arm();
 timer = micros();
 ///////////////////////////////////////////////
 //good to go
-pid(10000, 23.8500, 0, 0);
+pid(5, 23.8500, 0, 0);
 turnOff();
 }
 
