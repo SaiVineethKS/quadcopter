@@ -3,9 +3,8 @@
 
 
 #define mistakeRange 0 //orig:3 this is d!!!
-#define kp 1/20 //Bigger less kp original:4 this is p!!! 1/20 1/40
-#define ki 0 //Bigger less kp original:4 this is p!!! 1/20 1/40
-#define kd 1/50 //Bigger less kp original:4 this is p!!! 1/20 1/40
+#define kp 1/25 //Bigger less kp original:4 this is p!!! 1/20 1/40
+#define kd 1/20 //Bigger less kp original:4 this is p!!! 1/20 1/40
 #include<Servo.h>	
 int res=20;
 int _motor_A = 5;
@@ -50,11 +49,11 @@ void setup() {
  average();
  errorX = 180;
  errorY = 180;
- arm();
+ //arm();
 timer = micros();
 ///////////////////////////////////////////////
 //good to go
-pid(5, 23.8500, 0, 0);
+pid(500000000, 23.8500, 0, 0);
 turnOff();
 }
 
