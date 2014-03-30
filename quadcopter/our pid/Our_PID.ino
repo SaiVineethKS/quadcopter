@@ -1,11 +1,14 @@
 #include <Wire.h>
 #include "Kalman.h" // Source: https://github.com/TKJElectronics/KalmanFilter
+#define sampleTime 10//millis!!!
+#define kp 1/11 //Bigger less kp original:4 this is p!!! 1/20 1/40
+#define ki 1/9000 * sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
+#define kd 1/3 / sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
 
 
-#define mistakeRange 0 //orig:3 this is d!!!
-#define kp 1/25 //Bigger less kp original:4 this is p!!! 1/20 1/40
-#define kd 1/20 //Bigger less kp original:4 this is p!!! 1/20 1/40
-#include<Servo.h>	
+#include<Servo.h>
+
+
 int res=20;
 int _motor_A = 5;
 int _motor_B = 3;
@@ -53,7 +56,7 @@ void setup() {
 timer = micros();
 ///////////////////////////////////////////////
 //good to go
-pid(500000000, 23.8500, 0, 0);
+pid(20, 23.8500, 0, 0);
 turnOff();
 }
 
@@ -220,23 +223,26 @@ D.attach(_motor_D);
 
 
 void pid(double time, double minSpeed, double xAngle,double yAngle){
-  time = time/(res/4);
+  int start = millis();
+  double sumIX = 0;
+  double sumIY = 0;
   average();
   int lastX = kalAngleX;
   int lastY = kalAngleY;
- for(int i = 0;i <= time*100 ;i++){
+ while((millis()-start) < (time * 1000)){
 average();
 
 
 double errorX = xAngle-kalAngleX;
 double errorY = yAngle-kalAngleY;
-double pidX = errorX * kp - (kalAngleX-lastX) * kd;
-double pidY = errorY * kp - (kalAngleY-lastY) * kd;
+sumIX += errorX * ki;
+sumIY += errorY * ki;
+double pidX = errorX * kp + sumIX  - (kalAngleX-lastX) * kd;
+double pidY = errorY * kp + sumIY - (kalAngleY-lastY) * kd;
 double a = minSpeed + pidY;
 double b = minSpeed - pidX;
 double c = minSpeed - pidY;
 double d = minSpeed + pidX;
-
 if(a<20){
   a = 20;
 }
@@ -269,12 +275,11 @@ writeD(d);
 
 
 
-lastX = kalAngleX;
-lastY = kalAngleY;
+lastX = errorX;
+lastY = errorY;
 /*Serial.print("minSpeed: ");
 Serial.println(minSpeed);*/
-Serial.println(i);
-delay(10);
+delay(sampleTime);
 
 }
 }
