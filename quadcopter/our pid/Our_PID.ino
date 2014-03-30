@@ -1,9 +1,9 @@
 #include <Wire.h>
 #include "Kalman.h" // Source: https://github.com/TKJElectronics/KalmanFilter
 #define sampleTime 10//millis!!!
-#define kp 1/11 //Bigger less kp original:4 this is p!!! 1/20 1/40
-#define ki 1/9000 * sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
-#define kd 1/3 / sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
+#define kp 1/123 //Bigger less kp original:4 this is p!!! 1/20 1/40
+#define ki 0 * sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
+#define kd 1/10 / sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
 
 
 #include<Servo.h>
@@ -52,11 +52,11 @@ void setup() {
  average();
  errorX = 180;
  errorY = 180;
- //arm();
+ arm();
 timer = micros();
 ///////////////////////////////////////////////
 //good to go
-pid(20, 23.8500, 0, 0);
+pid(6, 22.8500, 0, 0);
 turnOff();
 }
 
@@ -192,7 +192,8 @@ while (i2cWrite(0x6B, 0x01, true)); // PLL with X axis gyroscope reference and d
 while (i2cRead(0x75, i2cData, 1));
 if (i2cData[0] != 0x68) { // Read "WHO_AM_I" register
 Serial.print(F("Error reading sensor"));
-while (1);
+turnOff();
+while (true){}
 }
 
 delay(100); // Wait for sensor to stabilize
@@ -239,10 +240,10 @@ sumIX += errorX * ki;
 sumIY += errorY * ki;
 double pidX = errorX * kp + sumIX  - (kalAngleX-lastX) * kd;
 double pidY = errorY * kp + sumIY - (kalAngleY-lastY) * kd;
-double a = minSpeed + pidY;
-double b = minSpeed - pidX;
-double c = minSpeed - pidY;
-double d = minSpeed + pidX;
+double a = minSpeed - pidY;
+double b = minSpeed + pidX;
+double c = minSpeed + pidY;
+double d = minSpeed - pidX;
 if(a<20){
   a = 20;
 }
@@ -261,13 +262,13 @@ Serial.print(a);Serial.print("\t");
 writeA(a);
 Serial.print("B:");
 Serial.print(b);Serial.print("\t");
-writeB(b);
+//writeB(b);
 Serial.print("C:");
 Serial.print(c);Serial.print("\t");
 writeC(c);
 Serial.print("D:");
 Serial.print(d);Serial.println("\t");
-writeD(d);
+//writeD(d);
 //Serial.print(temp);Serial.print("\t");
 
   
@@ -286,7 +287,7 @@ delay(sampleTime);
 
 
 
-long getHight(){
+long getHeight(){
   long duration, inches, cm;
  
   // The sensor is triggered by a HIGH pulse of 10 or more microseconds.
