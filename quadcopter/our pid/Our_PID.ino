@@ -2,10 +2,15 @@
 #include "Kalman.h" // Source: https://github.com/TKJElectronics/KalmanFilter
 #define sampleTime 10//millis!!!
 #define kp 1/16.55 //Bigger less kp original:4 this is p!!! 1/20 1/40
-#define ki 0 * sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
+#define ki 10 * sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
 #define kd 0 / sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
 
-
+//////////////////////////////////////////////////////////////////
+//altitude pid
+#define Hkp 1/12
+#define Hki 1/9000 * sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
+#define Hkd 1/3 / sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
+//////////////////////////////////////////////////////////////////
 #include<Servo.h>
 
 
@@ -37,7 +42,7 @@ Kalman kalmanY;
 int16_t accX, accY, accZ;
 int16_t tempRaw;
 int16_t gyroX, gyroY, gyroZ;
-
+double lastSpeed = 0;
 double accXangle, accYangle; // Angle calculate using the accelerometer
 double temp; // Temperature
 double gyroXangle, gyroYangle; // Angle calculate using the gyro
@@ -52,16 +57,18 @@ void setup() {
  average();
  errorX = 180;
  errorY = 180;
- arm();
+ //arm();
 timer = micros();
 ///////////////////////////////////////////////
 //good to go
-pid(6, 22.8500, 0, 0);
-turnOff();
+lastSpeed = 23.850;
+//pid(20, 23.8500, 0, 0);
+//turnOff();
+altitude(15, 10000000);
 }
 
 void loop() {
- //Serial.println(getHight());
+ Serial.println(getHight());
 }
 
 void average()
@@ -139,7 +146,7 @@ Serial.println ("Done!");
 
 void turnOff()
 {
-  D.writeMicroseconds(1500);
+ D.writeMicroseconds(1500);
 B.writeMicroseconds(1500);
 A.writeMicroseconds(1500);
 C.writeMicroseconds(1500);
@@ -149,6 +156,7 @@ Serial.println ("Turned off");
 
 void qspeed(float speed)
 {
+  lastSpeed = speed;
 A.writeMicroseconds(speed*5+1500);
 B.writeMicroseconds(speed*5+1500);
 C.writeMicroseconds(speed*5+1500);
@@ -192,8 +200,7 @@ while (i2cWrite(0x6B, 0x01, true)); // PLL with X axis gyroscope reference and d
 while (i2cRead(0x75, i2cData, 1));
 if (i2cData[0] != 0x68) { // Read "WHO_AM_I" register
 Serial.print(F("Error reading sensor"));
-turnOff();
-while (true){}
+while (1);
 }
 
 delay(100); // Wait for sensor to stabilize
@@ -224,6 +231,7 @@ D.attach(_motor_D);
 
 
 void pid(double time, double minSpeed, double xAngle,double yAngle){
+  lastSpeed = minSpeed;
   int start = millis();
   double sumIX = 0;
   double sumIY = 0;
@@ -240,10 +248,10 @@ sumIX += errorX * ki;
 sumIY += errorY * ki;
 double pidX = errorX * kp + sumIX  - (kalAngleX-lastX) * kd;
 double pidY = errorY * kp + sumIY - (kalAngleY-lastY) * kd;
-double a = minSpeed - pidY;
-double b = minSpeed + pidX;
-double c = minSpeed + pidY;
-double d = minSpeed - pidX;
+double a = minSpeed + pidY;
+double b = minSpeed - pidX;
+double c = minSpeed - pidY;
+double d = minSpeed + pidX;
 if(a<20){
   a = 20;
 }
@@ -262,13 +270,13 @@ Serial.print(a);Serial.print("\t");
 writeA(a);
 Serial.print("B:");
 Serial.print(b);Serial.print("\t");
-//writeB(b);
+writeB(b);
 Serial.print("C:");
 Serial.print(c);Serial.print("\t");
 writeC(c);
 Serial.print("D:");
 Serial.print(d);Serial.println("\t");
-//writeD(d);
+writeD(d);
 //Serial.print(temp);Serial.print("\t");
 
   
@@ -287,7 +295,7 @@ delay(sampleTime);
 
 
 
-long getHeight(){
+long getHight(){
   long duration, inches, cm;
  
   // The sensor is triggered by a HIGH pulse of 10 or more microseconds.
@@ -309,5 +317,64 @@ long getHeight(){
  // inches = microsecondsToInches(duration);
   cm = duration / 29 / 2;
   delay(10);
- return cm; 
+  average();
+  long hight;
+  if (abs(kalAngleX) > 25 || abs(kalAngleY) > 25){
+    return 0;
+  }else{
+ return cos(abs(kalAngleX)*DEG_TO_RAD) * (cm * cos(abs(kalAngleY)*DEG_TO_RAD)); 
+  }
+}
+
+long getDistance(){
+  long duration, inches, cm;
+ 
+  // The sensor is triggered by a HIGH pulse of 10 or more microseconds.
+  // Give a short LOW pulse beforehand to ensure a clean HIGH pulse:
+  pinMode(11, OUTPUT);
+  digitalWrite(11, LOW);
+  delayMicroseconds(2);
+  digitalWrite(11, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(11, LOW);
+ 
+  // Read the signal from the sensor: a HIGH pulse whose
+  // duration is the time (in microseconds) from the sending
+  // of the ping to the reception of its echo off of an object.
+  pinMode(10, INPUT);
+  duration = pulseIn(10, HIGH);
+ 
+  // convert the time into a distance
+ // inches = microsecondsToInches(duration);
+  cm = duration / 29 / 2;
+  delay(10);
+  average();
+  return cm;
+}
+
+
+void altitude(int wantedHight, double time){
+     
+  double pidSpeed = lastSpeed;
+  double start = millis();
+  double error = 0;
+  double sumIHight = 0;
+  int hight = getHight();
+  if (hight == 0){
+    hight = getDistance();
+  }
+  double lastHight = hight;
+  while((millis()-start) < (time * 1000)){
+     
+    hight = getHight();
+    if (hight == 0){
+      hight = getDistance();
+    }
+    
+    error = wantedHight - hight;
+    sumIHight += error * Hkp;
+    double pidValue = error * Hkp + sumIHight  - (hight - lastHight) * Hkd;
+    pid(0.1, pidSpeed + pidValue, 0, 0);
+    lastHight = hight;
+  }
 }
