@@ -2,7 +2,7 @@
 #include "Kalman.h" // Source: https://github.com/TKJElectronics/KalmanFilter
 #define sampleTime 10//millis!!!
 #define kp 1/16.55 //Bigger less kp original:4 this is p!!! 1/20 1/40
-#define ki 10 * sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
+#define ki 0 * sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
 #define kd 0 / sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
 
 //////////////////////////////////////////////////////////////////
