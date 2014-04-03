@@ -1,15 +1,15 @@
 #include <Wire.h>
 #include "Kalman.h" // Source: https://github.com/TKJElectronics/KalmanFilter
 #define sampleTime 10//millis!!!
-#define kp 1/16.55 //Bigger less kp original:4 this is p!!! 1/20 1/40
+#define kp 1/609.5 //Bigger less kp original:4 this is p!!! 1/20 1/40
 #define ki 0 * sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
-#define kd 0 / sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
+#define kd 1/100/ sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
 
 //////////////////////////////////////////////////////////////////
 //altitude pid
-#define Hkp 1/12
+#define Hkp 1/9  
 #define Hki 1/9000 * sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
-#define Hkd 1/3 / sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
+#define Hkd 1/5 / sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
 //////////////////////////////////////////////////////////////////
 #include<Servo.h>
 
@@ -55,20 +55,19 @@ uint8_t i2cData[14]; // Buffer for I2C data
 void setup() {
  initStuff();
  average();
- errorX = 180;
- errorY = 180;
- //arm();
+ arm();
 timer = micros();
 ///////////////////////////////////////////////
 //good to go
-lastSpeed = 23.850;
-//pid(20, 23.8500, 0, 0);
-//turnOff();
-altitude(15, 10000000);
+lastSpeed = 23;
+pid(6, 24, 0, 0);
+
+turnOff();
+//altitude(15, 10000000);
 }
 
 void loop() {
- Serial.println(getHight());
+ //Serial.println(getHight());
 }
 
 void average()
@@ -123,6 +122,11 @@ timer = micros();
 temp = ((double)tempRaw + 12412.0) / 340.0;
 kalAngleX = kalAngleX - errorX;
 kalAngleY = kalAngleY - errorY;
+kalAngleX += 3;
+kalAngleY -= 1;
+
+kalAngleX -= 180;
+kalAngleY -= 180;
 }
 
 
@@ -176,7 +180,7 @@ B.writeMicroseconds(speed*5+1500);
 
 void writeC(float speed)
 {
-C.writeMicroseconds(speed*5+1500);
+C.writeMicroseconds(speed*5+1500.5);
 }
 
 void writeD(float speed)
@@ -246,12 +250,15 @@ double errorX = xAngle-kalAngleX;
 double errorY = yAngle-kalAngleY;
 sumIX += errorX * ki;
 sumIY += errorY * ki;
-double pidX = errorX * kp + sumIX  - (kalAngleX-lastX) * kd;
-double pidY = errorY * kp + sumIY - (kalAngleY-lastY) * kd;
-double a = minSpeed + pidY;
-double b = minSpeed - pidX;
-double c = minSpeed - pidY;
-double d = minSpeed + pidX;
+double pidX = errorX * kp + sumIX - (kalAngleX - lastX) *kd;
+double pidY = errorY * kp + sumIY - (kalAngleY - lastY) *kd;
+double a = minSpeed - pidY;
+double b = minSpeed + pidX;
+double c = minSpeed + pidY;
+double d = minSpeed - pidX;
+
+
+
 if(a<20){
   a = 20;
 }
@@ -265,18 +272,25 @@ if(d<20){
   d = 20;
 }
 
+
+if (kalAngleY > 180 || kalAngleY < -180 || kalAngleX > 180 || kalAngleX < -180){
+  turnOff();
+  return;
+}
 Serial.print("A:");
 Serial.print(a);Serial.print("\t");
 writeA(a);
 Serial.print("B:");
 Serial.print(b);Serial.print("\t");
-writeB(b);
+//writeB(b);
 Serial.print("C:");
 Serial.print(c);Serial.print("\t");
 writeC(c);
 Serial.print("D:");
 Serial.print(d);Serial.println("\t");
-writeD(d);
+Serial.print(kalAngleX);Serial.println("\t");
+Serial.print(kalAngleY);Serial.println("\t");
+//writeD(d);
 //Serial.print(temp);Serial.print("\t");
 
   
