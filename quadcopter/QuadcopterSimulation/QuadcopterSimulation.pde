@@ -1,14 +1,16 @@
+
 boolean click=false;
 PVector sliderLoc = new PVector(50,500);
 int k=5;
 int l = 200;
-float degrees = 0;
+float degrees = 90;
 float alpha = degrees * (PI/180);
-int kP=0,kI=0,kD=0;
-int motorLeft = 0;
+double kp=1/25,ki=1/10000,kd=1/30;
+int motorDelta = 0;
 float difY,difX;
 int posX,posY;
-
+double sumIY = 0;
+double lastY = 0;
 void setup()
 {
   size(800,600);
@@ -86,12 +88,47 @@ void draw()
     rect(sliderLoc.x,sliderLoc.y,20,20);
   //Until Here - Slider
   
-    motorLeft= (int)sliderLoc.x-50;
-    degrees += motorLeft/15;
+    motorDelta= (int)(sliderLoc.x-150)*2;
     
    
-    degrees = degrees % 361;//Displays degrees until 361
+  pid (0.001, 0, 0, 0);
   
  
 }
 
+
+void pid(double time, double minSpeed, double xAngle,double yAngle){
+  int start = millis();
+ while((millis()-start) < (time * 1000)){
+
+
+double errorY = yAngle-degrees;
+sumIY += errorY * 1/10000;
+double pidY = errorY * 1/40 + sumIY - (degrees - lastY) *1/40;
+double a = minSpeed - pidY;
+double c = minSpeed + pidY;
+
+
+
+
+
+print("A:");
+print(a);print("\t");
+print("C:");
+print(c);print("\t");
+degrees += (float)((c-a))*0.7;
+//writeD(d);
+//print(temp);print("\t");
+
+  
+//minSpeed-=(1.0/time*(minSpeed-20)/100.0);//Decreases the motors speed in relation to time and minSpeed
+
+
+
+lastY = errorY;
+/*print("minSpeed: ");
+println(minSpeed);*/
+delay(6);
+
+}
+}
