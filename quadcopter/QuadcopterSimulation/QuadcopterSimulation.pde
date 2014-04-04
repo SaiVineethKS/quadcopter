@@ -1,8 +1,11 @@
-
 boolean click=false;
 PVector sliderLoc = new PVector(50,500);
+double motorA, motorC;
+boolean enabled=true;
 int k=5;
+int i=0;
 int l = 200;
+double minSpeed = 24;
 float degrees = 90;
 float alpha = degrees * (PI/180);
 double kp=1/25,ki=1/10000,kd=1/30;
@@ -11,20 +14,30 @@ float difY,difX;
 int posX,posY;
 double sumIY = 0;
 double lastY = 0;
+ String data = "";
+  //String[] list = split(data, ' ');
 void setup()
 {
   size(800,600);
   posX=125;
   posY=250;
+  
+ 
+
+  // Writes the strings to a file, each on a separate line
+  //saveStrings("flightRecord.txt", list);
 }
 void draw()
 {
+  
   alpha = degrees * (PI/180); //Update alpha (Radians) with new degrees
   background(200); 
   fill(255,0,0);
   text("X(Red)",100,300);
   text("Push Down Right Motor",90,485);
-  text("AngleX: " + degrees, 700,50);
+  text("AngleX: " + degrees, 575,50);
+  text("MotorA (Right): " + motorA, 575,100);
+  text("MotorC: " + motorC, 575,150);
   stroke(255,0,0);
     
   /*
@@ -88,14 +101,40 @@ void draw()
     rect(sliderLoc.x,sliderLoc.y,20,20);
   //Until Here - Slider
   
-    motorDelta= (int)(sliderLoc.x-150)*2;
+    motorDelta= (int)(sliderLoc.x-50)*2;
     
-   
+  i++; 
   pid (0.001, 0, 0, 0);
-  
+ if(i<100)
+ {
+  displayFlight();
+ }
+ else
+ {
+   if(enabled)
+   {
+     //println("random" + random(1));
+     int second = second();
+     int minute = minute();
+     int hour = hour();
+     int day= day();
+     int month = month();
+     int year = year();
+     
+     String name = "flightRecord" + hour + minute + day + month + year + ".txt";
+     
+     String[] list = split(data, ' ');
+     saveStrings(name, list);
+     enabled=false;
+   }
+ }
  
 }
 
+void displayFlight()
+{
+  data+=" a:" + motorA + "c:" + motorC + "ang:" + degrees;
+}
 
 void pid(double time, double minSpeed, double xAngle,double yAngle){
   int start = millis();
@@ -112,10 +151,12 @@ double c = minSpeed + pidY;
 
 
 
-print("A:");
-print(a);print("\t");
-print("C:");
-print(c);print("\t");
+//print("A:");
+motorA= a+24;
+//print(a);print("\t");
+//print("C:");
+motorC=c+24;
+//print(c);print("\t");
 degrees += (float)((c-a))*0.7;
 //writeD(d);
 //print(temp);print("\t");
