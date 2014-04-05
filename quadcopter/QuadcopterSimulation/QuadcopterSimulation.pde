@@ -29,7 +29,7 @@ void setup()
   size(x,y);
   posX=125;
   posY=250;
-   angles=new float[time];
+   angles=new float[x-255-4];
 //If you have saved data on txt file you can load it using the function below
 // loadData("958542014");
 
@@ -124,8 +124,19 @@ void draw()
  {
   //to display recorded flight 
   // degrees = (float)Angles[i];
+  if(!(i>=angles.length))
+  {
   angles[i] = degrees;
- 
+  }
+  else
+  {
+    for(int j=0;j<angles.length-1;j++)
+    {
+      
+      angles[j] = angles[j+1];
+    }
+    angles[angles.length-1] = degrees;
+  }
   i++;
   displayFlight();
  
@@ -156,14 +167,21 @@ void draw()
  stroke(255,0,0);
     for(int j=0;j<i;j++)
     {//Draw angles graph
-    if(255+j>x-5)
+  /*  if(j==0)
     {
-      
-    }
-    else
+    if(x-5<255+i)
     {
-        line(255+j,300,255+j,300-angles[j]/5);
+      j=255+i-x-5;
     }
+    }*/
+  if(!(j>=x-255-4))
+  {
+    line(255+j,300,255+j,300-angles[j]/5);
+  }
+
+   
+        
+    
     }
  
  
