@@ -2,18 +2,19 @@ boolean click=false;
 int x,y;
 String [] loadedData;
 double [] aData,cData,Angles;
-int time=3000;
+int time=30000;
 PVector sliderLoc = new PVector(50,500);
 double motorA, motorC;
 boolean enabled=true;
 int k=5;
-int i=1;
+int counter=1;
 int l = 200;
 double minSpeed = 24;
 float degrees = 0;
 float alpha = degrees * (PI/180);
 double kp=1/25,ki=1/10000,kd=1/30;
 int motorDelta = 0;
+float p,i,d;
 float difY,difX;
 int posX,posY;
 double sumIY = 0;
@@ -44,9 +45,12 @@ void draw()
   fill(255,0,0);
   text("X(Red)",100,300);
   text("Push Down Right Motor",90,485);
-  text("AngleX: " + degrees, 575,50);
-  text("MotorA (Right): " + motorA, 575,100);
-  text("MotorC: " + motorC, 575,150);
+  text("AngleX: " + degrees, 650,50);
+  text("MotorA (Right): " + motorA, 650,100);
+  text("MotorC: " + motorC, 650,150);
+  text("P: " + p, 650,200);
+  text("I: " + i, 650,250);
+  text("D: " + i, 650,300);
   stroke(255,0,0);
     
   /*
@@ -120,13 +124,13 @@ void draw()
     
    
 //  pid (0.001, 0, 0, 0);
- if(i<time)
+ if(counter<time)
  {
   //to display recorded flight 
   // degrees = (float)Angles[i];
-  if(!(i>=angles.length))
+  if(!(counter>=angles.length))
   {
-  angles[i] = degrees;
+  angles[counter] = degrees;
   }
   else
   {
@@ -137,7 +141,7 @@ void draw()
     }
     angles[angles.length-1] = degrees;
   }
-  i++;
+  counter++;
   displayFlight();
  
  }
@@ -165,7 +169,7 @@ void draw()
  
  }
  stroke(255,0,0);
-    for(int j=0;j<i;j++)
+    for(int j=0;j<counter;j++)
     {//Draw angles graph
   /*  if(j==0)
     {
@@ -176,7 +180,7 @@ void draw()
     }*/
   if(!(j>=x-255-4))
   {
-    line(255+j,300,255+j,300-angles[j]/5);
+    line(255+j,400,255+j,400-angles[j]/5);
   }
 
    
