@@ -1,4 +1,7 @@
 boolean click=false;
+String [] loadedData;
+double [] aData,cData,Angles;
+
 PVector sliderLoc = new PVector(50,500);
 double motorA, motorC;
 boolean enabled=true;
@@ -6,7 +9,7 @@ int k=5;
 int i=0;
 int l = 200;
 double minSpeed = 24;
-float degrees = 90;
+float degrees = 0;
 float alpha = degrees * (PI/180);
 double kp=1/25,ki=1/10000,kd=1/30;
 int motorDelta = 0;
@@ -22,7 +25,8 @@ void setup()
   posX=125;
   posY=250;
   
- 
+//If you have saved data on txt file you can load it using the function below
+// loadData("958542014");
 
   // Writes the strings to a file, each on a separate line
   //saveStrings("flightRecord.txt", list);
@@ -101,12 +105,20 @@ void draw()
     rect(sliderLoc.x,sliderLoc.y,20,20);
   //Until Here - Slider
   
-    motorDelta= (int)(sliderLoc.x-50)*2;
+    motorDelta= (int)(sliderLoc.x-50)/3;
+    
+    /**/
+    
+    updateAngles();
     
   i++; 
-  pid (0.001, 0, 0, 0);
- if(i<100)
+  
+//  pid (0.001, 0, 0, 0);
+ if(i<300)
  {
+  //to display recorded flight 
+  // degrees = (float)Angles[i];
+  
   displayFlight();
  }
  else
@@ -123,18 +135,59 @@ void draw()
      
      String name = "flightRecord" + hour + minute + day + month + year + ".txt";
      
-     String[] list = split(data, ' ');
+     String[] list = split(data, "  ");
      saveStrings(name, list);
+     println("Done saving!");
      enabled=false;
    }
  }
  
 }
 
+
 void displayFlight()
 {
-  data+=" a:" + motorA + "c:" + motorC + "ang:" + degrees;
+  data+="  " + motorA + "," + motorC + "," + degrees;
 }
+
+void updateAngles()
+{
+  degrees+=motorDelta;
+    
+    degrees%=361;
+  
+}
+void loadData(String name)//Load previous data from flights
+{
+ 
+  String[] load = loadStrings("flightRecord"+name+".txt");
+  aData=new double[load.length];
+  cData=new double[load.length];
+  Angles=new double[load.length];
+  for(int i=0; i<load.length; i++)
+  {
+   print(i);
+   if(i==0){}else{
+    loadedData = split(load[i], ',');
+    aData[i] = Double.parseDouble(loadedData[0]);
+    cData[i] = Double.parseDouble(loadedData[1]);
+    Angles[i] = Double.parseDouble(loadedData[2]);
+    print("A: " + loadedData[0] + " C: " + loadedData[1] + " Angle: " + loadedData[2]);
+   }
+  }
+  //aData,cData,Angles;
+  
+ 
+  
+}
+
+
+void recordFlight()
+{
+  //get real time data from serial communication with quadcopter
+}
+
+
 
 void pid(double time, double minSpeed, double xAngle,double yAngle){
   int start = millis();
