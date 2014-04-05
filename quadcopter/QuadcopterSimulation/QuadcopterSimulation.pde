@@ -1,4 +1,5 @@
 boolean click=false;
+int x,y;
 String [] loadedData;
 double [] aData,cData,Angles;
 int time=3000;
@@ -19,10 +20,13 @@ double sumIY = 0;
 double lastY = 0;
 float [] angles;
  String data = "";
-  //String[] list = split(data, ' ');
+  
+  
 void setup()
 {
-  size(800,600);
+  x=800;
+  y=600;
+  size(x,y);
   posX=125;
   posY=250;
    angles=new float[time];
@@ -151,8 +155,15 @@ void draw()
  }
  stroke(255,0,0);
     for(int j=0;j<i;j++)
-    {//Graph angles
-        line(500+j,300,500+j,300-angles[j]/5);
+    {//Draw angles graph
+    if(255+j>x-5)
+    {
+      
+    }
+    else
+    {
+        line(255+j,300,255+j,300-angles[j]/5);
+    }
     }
  
  
