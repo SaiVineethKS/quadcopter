@@ -1,12 +1,12 @@
 boolean click=false;
 String [] loadedData;
 double [] aData,cData,Angles;
-
+int time=3000;
 PVector sliderLoc = new PVector(50,500);
 double motorA, motorC;
 boolean enabled=true;
 int k=5;
-int i=0;
+int i=1;
 int l = 200;
 double minSpeed = 24;
 float degrees = 0;
@@ -17,6 +17,7 @@ float difY,difX;
 int posX,posY;
 double sumIY = 0;
 double lastY = 0;
+float [] angles;
  String data = "";
   //String[] list = split(data, ' ');
 void setup()
@@ -24,7 +25,7 @@ void setup()
   size(800,600);
   posX=125;
   posY=250;
-  
+   angles=new float[time];
 //If you have saved data on txt file you can load it using the function below
 // loadData("958542014");
 
@@ -111,18 +112,24 @@ void draw()
     
     updateAngles();
     
-  i++; 
-  
+
+    
+   
 //  pid (0.001, 0, 0, 0);
- if(i<300)
+ if(i<time)
  {
   //to display recorded flight 
   // degrees = (float)Angles[i];
-  
+  angles[i] = degrees;
+ 
+  i++;
   displayFlight();
+ 
  }
  else
  {
+    
+
    if(enabled)
    {
      //println("random" + random(1));
@@ -140,7 +147,14 @@ void draw()
      println("Done saving!");
      enabled=false;
    }
+ 
  }
+ stroke(255,0,0);
+    for(int j=0;j<i;j++)
+    {//Graph angles
+        line(500+j,300,500+j,300-angles[j]/5);
+    }
+ 
  
 }
 
