@@ -1,6 +1,6 @@
 #include <Wire.h>
 #include "Kalman.h" // Source: https://github.com/TKJElectronics/KalmanFilter
-#define sampleTime 100//millis!!!
+#define sampleTime 10//millis!!!
 #define kp 1/300 //Bigger less kp original:4 this is p!!! 1/20 1/40
 #define ki 0  //Bigger less kp original:4 this is p!!! 1/20 1/40
 #define kd 0 //Bigger less kp original:4 this is p!!! 1/20 1/40
@@ -254,20 +254,21 @@ void pid(double time, double minSpeed, double xAngle,double yAngle){
   average();
   int lastX = xAngle-kalAngleX;
   int lastY = yAngle-kalAngleY;
+  double errorX,errorY,pidX,pidY,a,b,c,d;
  while((millis()-start) < (time * 1000)){
 average();
 
 
-double errorX = xAngle-kalAngleX;
-double errorY = yAngle-kalAngleY;
+ errorX = xAngle-kalAngleX;
+ errorY = yAngle-kalAngleY;
 sumIX += errorX * ki;
 sumIY += errorY * ki;
-double pidX = errorX * kp + sumIX - (kalAngleX - lastX) *kd;
-double pidY = errorY * kp + sumIY - (kalAngleY - lastY) *kd;
-double a = minSpeed - pidY;
-double b = minSpeed + pidX;
-double c = minSpeed + pidY;
-double d = minSpeed - pidX;
+ pidX = errorX * kp + sumIX*sampleTime - (errorX - lastX)/sampleTime *kd;
+ pidY = errorY * kp + sumIY*sampleTime - (errorY - lastY)/sampleTime *kd;
+ a = minSpeed - pidY;
+ b = minSpeed + pidX;
+ c = minSpeed + pidY;
+ d = minSpeed - pidX;
 
 
 
