@@ -1,9 +1,9 @@
 #include <Wire.h>
 #include "Kalman.h" // Source: https://github.com/TKJElectronics/KalmanFilter
-#define sampleTime 10//millis!!!
-#define kp 1/609.5 //Bigger less kp original:4 this is p!!! 1/20 1/40
-#define ki 0 * sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
-#define kd 1/100/ sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
+#define sampleTime 100//millis!!!
+#define kp 1/300 //Bigger less kp original:4 this is p!!! 1/20 1/40
+#define ki 0  //Bigger less kp original:4 this is p!!! 1/20 1/40
+#define kd 0 //Bigger less kp original:4 this is p!!! 1/20 1/40
 
 //////////////////////////////////////////////////////////////////
 //altitude pid
@@ -12,7 +12,6 @@
 #define Hkd 1/5 / sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
 //////////////////////////////////////////////////////////////////
 #include<Servo.h>
-
 
 int res=20;
 int _motor_A = 5;
@@ -54,13 +53,17 @@ uint8_t i2cData[14]; // Buffer for I2C data
 
 void setup() {
  initStuff();
+ Serial.println("appears");
  average();
  arm();
 timer = micros();
 ///////////////////////////////////////////////
 //good to go
 lastSpeed = 23;
-pid(6, 24, 0, 0);
+writeC(24);
+writeA(24);
+delay(2000);
+pid(999999999, 24, 0, 0);
 
 turnOff();
 //altitude(15, 10000000);
@@ -180,7 +183,7 @@ B.writeMicroseconds(speed*5+1500);
 
 void writeC(float speed)
 {
-C.writeMicroseconds(speed*5+1500.5);
+C.writeMicroseconds(speed*5+1500.8);
 }
 
 void writeD(float speed)
@@ -198,9 +201,17 @@ i2cData[0] = 7; // Set the sample rate to 1000Hz - 8kHz/(7+1) = 1000Hz
 i2cData[1] = 0x00; // Disable FSYNC and set 260 Hz Acc filtering, 256 Hz Gyro filtering, 8 KHz sampling
 i2cData[2] = 0x00; // Set Gyro Full Scale Range to ±250deg/s
 i2cData[3] = 0x00; // Set Accelerometer Full Scale Range to ±2g
-while (i2cWrite(0x19, i2cData, 4, false)); // Write to all four registers at once
-while (i2cWrite(0x6B, 0x01, true)); // PLL with X axis gyroscope reference and disable sleep mode
-
+Serial.println("1");
+while (i2cWrite(0x19, i2cData, 4, false)){
+  Serial.println("init 1 faild");
+  delay(10);
+} // Write to all four registers at once
+Serial.println("2");
+while (i2cWrite(0x6B, 0x01, true)){
+    Serial.println("init 2 faild");
+  delay(10);
+} // PLL with X axis gyroscope reference and disable sleep mode
+Serial.println("3");
 while (i2cRead(0x75, i2cData, 1));
 if (i2cData[0] != 0x68) { // Read "WHO_AM_I" register
 Serial.print(F("Error reading sensor"));
@@ -229,6 +240,7 @@ A.attach(_motor_A);
 B.attach(_motor_B);
 C.attach(_motor_C);
 D.attach(_motor_D);
+Serial.println("Inintalized succsefully");
 }
 
 
@@ -240,8 +252,8 @@ void pid(double time, double minSpeed, double xAngle,double yAngle){
   double sumIX = 0;
   double sumIY = 0;
   average();
-  int lastX = kalAngleX;
-  int lastY = kalAngleY;
+  int lastX = xAngle-kalAngleX;
+  int lastY = yAngle-kalAngleY;
  while((millis()-start) < (time * 1000)){
 average();
 
@@ -273,23 +285,24 @@ if(d<20){
 }
 
 
-if (kalAngleY > 180 || kalAngleY < -180 || kalAngleX > 180 || kalAngleX < -180){
-  turnOff();
+if (kalAngleY > 100 || kalAngleY < -100 || kalAngleX > 100 || kalAngleX < -100){
+  //turnOff();
   return;
 }
-Serial.print("A:");
-Serial.print(a);Serial.print("\t");
+//Serial.print("A:");
+//Serial.print(a);Serial.print("\t");
 writeA(a);
-Serial.print("B:");
-Serial.print(b);Serial.print("\t");
+//Serial.print("B:");
+//Serial.print(b);Serial.print("\t");
 //writeB(b);
-Serial.print("C:");
-Serial.print(c);Serial.print("\t");
+//Serial.print("C:");
+//Serial.print(c);Serial.print("\t");
 writeC(c);
-Serial.print("D:");
-Serial.print(d);Serial.println("\t");
-Serial.print(kalAngleX);Serial.println("\t");
-Serial.print(kalAngleY);Serial.println("\t");
+//Serial.print("D:");
+//Serial.print(d);Serial.println("\t");
+//Serial.print(kalAngleX);Serial.println("\t");
+Serial.println(kalAngleY);
+
 //writeD(d);
 //Serial.print(temp);Serial.print("\t");
 
