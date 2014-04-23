@@ -11,13 +11,8 @@
 #define Hki 1/9000 * sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
 #define Hkd 1/5 / sampleTime //Bigger less kp original:4 this is p!!! 1/20 1/40
 //////////////////////////////////////////////////////////////////
-#include<Servo.h>
 
 int res=20;
-int _motor_A = 5;
-int _motor_B = 3;
-int _motor_C = 9;
-int _motor_D = 6;
 int _ultraSonicA_E = 2;
 int _ultraSonicA_T = 4;
 int _ultraSonicB_E = 7;
@@ -28,10 +23,6 @@ int _ultraSonicD_E = A0;
 int _ultraSonicD_T = A1;
 int _ultraSonicDown_E = A2;
 int _ultraSonicDown_T = A3;
-Servo A;
-Servo B;
-Servo C;
-Servo D;
 
 
 Kalman kalmanX; // Create the Kalman instances
@@ -140,55 +131,70 @@ kalAngleY -= 180;
 
 void arm()
 {
-A.writeMicroseconds(1500);
-B.writeMicroseconds(1500);
-C.writeMicroseconds(1500);
-D.writeMicroseconds(1500);
 Serial.println ("Arming.... ");
-delay (4000);
-Serial.println ("Done!");
+  for(int i = 0; i < 32000; i++){
+   qspeed(0);
+  delayMicroseconds(125);
+  }
+  Serial.println ("Done!");
 }
 
 
 
 void turnOff()
 {
- D.writeMicroseconds(1500);
-B.writeMicroseconds(1500);
-A.writeMicroseconds(1500);
-C.writeMicroseconds(1500);
+ qspeed(0);
 
 Serial.println ("Turned off");
 }
 
-void qspeed(float speed)
+void qspeed(float MotorSpeed)
 {
-  lastSpeed = speed;
-A.writeMicroseconds(speed*5+1500);
-B.writeMicroseconds(speed*5+1500);
-C.writeMicroseconds(speed*5+1500);
-D.writeMicroseconds(speed*5+1500);
+  writeA(MotorSpeed);
+  writeB(MotorSpeed);
+  writeC(MotorSpeed);
+  writeD(MotorSpeed);
 }
 
 
-void writeA(float speed)
-{
-A.writeMicroseconds(speed*5+1500);
+void writeA(float MotorSpeed){
+ if (MotorSpeed == 0){
+     analogWrite(5, 1400);
+ }else if(MotorSpeed <= 100){
+     analogWrite(5, (1669+((MotorSpeed/100)*120)));
+ }else{
+     analogWrite(5, 1790);
+ }
 }
 
-void writeB(float speed)
-{
-B.writeMicroseconds(speed*5+1500);
+void writeB(float MotorSpeed){
+ if (MotorSpeed == 0){
+     analogWrite(3, 1400);
+ }else if(MotorSpeed <= 100){
+     analogWrite(3, (1669+((MotorSpeed/100)*120)));
+ }else{
+     analogWrite(3, 1790);
+ }
 }
 
-void writeC(float speed)
-{
-C.writeMicroseconds(speed*5+1500.8);
+void writeC(float MotorSpeed){
+ if (MotorSpeed == 0){
+     analogWrite(9, 1400);
+ }else if(MotorSpeed <= 100){
+     analogWrite(9, (1669+((MotorSpeed/100)*120)));
+ }else{
+     analogWrite(9, 1790);
+ }
 }
 
-void writeD(float speed)
-{
-D.writeMicroseconds(speed*5+1500);
+void writeD(float MotorSpeed){
+ if (MotorSpeed == 0){
+     analogWrite(6, 1400);
+ }else if(MotorSpeed <= 100){
+     analogWrite(6, (1669+((MotorSpeed/100)*120)));
+ }else{
+     analogWrite(6, 1790);
+ }
 }
 
 void initStuff(){
@@ -236,10 +242,6 @@ gyroXangle = accXangle;
 gyroYangle = accYangle;
 compAngleX = accXangle;
 compAngleY = accYangle;
-A.attach(_motor_A);
-B.attach(_motor_B);
-C.attach(_motor_C);
-D.attach(_motor_D);
 Serial.println("Inintalized succsefully");
 }
 
@@ -269,21 +271,6 @@ sumIY += errorY * ki;
  b = minSpeed + pidX;
  c = minSpeed + pidY;
  d = minSpeed - pidX;
-
-
-
-if(a<20){
-  a = 20;
-}
-if(b<20){
-  b = 20;
-}
-if(c<20){
-  c = 20;
-}
-if(d<20){
-  d = 20;
-}
 
 
 if (kalAngleY > 100 || kalAngleY < -100 || kalAngleX > 100 || kalAngleX < -100){
