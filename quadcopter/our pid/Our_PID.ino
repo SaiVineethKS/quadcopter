@@ -1,6 +1,5 @@
 #include <Wire.h>
 #include "Kalman.h" // Source: https://github.com/TKJElectronics/KalmanFilter
-#define sampleTime 10//millis!!!
 #define kp 1/300 //Bigger less kp original:4 this is p!!! 1/20 1/40
 #define ki 0  //Bigger less kp original:4 this is p!!! 1/20 1/40
 #define kd 0 //Bigger less kp original:4 this is p!!! 1/20 1/40
@@ -50,10 +49,7 @@ void setup() {
 timer = micros();
 ///////////////////////////////////////////////
 //good to go
-lastSpeed = 23;
-writeC(24);
-writeA(24);
-delay(2000);
+lastSpeed = 24;
 pid(999999999, 24, 0, 0);
 
 turnOff();
@@ -303,7 +299,6 @@ lastX = errorX;
 lastY = errorY;
 /*Serial.print("minSpeed: ");
 Serial.println(minSpeed);*/
-delay(sampleTime);
 
 }
 }
