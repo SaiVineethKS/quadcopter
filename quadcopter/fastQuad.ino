@@ -1,6 +1,7 @@
-#define kp 1/25
-#define ki 0
-#define kd 0
+#define Pu 2.7e6
+#define kp 1/8//1/5//37.5//0.044
+#define ki 1/500000000//kp*1/Pu//0.000000001//1/900000
+#define kd 1/10//1/10//3000
 
 
 
@@ -10,18 +11,19 @@
   #include "Wire.h"
 #endif
 MPU6050 accelgyro;
-double lastTime, timer, temp, tempRaw;
+double lastTime, timer, temp, tempRaw, deltaTimer;
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
 double accXangle, accYangle, gyroXangle, gyroYangle, kalAngleX, kalAngleY, compAngleX, compAngleY;
 
 void setup() {
+   lastTime = micros();  
+   timer = micros();
    initStuff();
    updateAngles();
    arm();
-   lastTime = micros();  
-   timer = micros();
-   pid(999999999, 24, 0, 0);
+   pid(5, 24, 0, 0);
+  turnOff();
 }
 
 void loop() {/*
@@ -122,30 +124,19 @@ void writeD(float MotorSpeed){
 }
 
 void updateAngles(){
-  accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+deltaTimer = micros() - timer;
+accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 accXangle = (atan2(ax, az) + PI) * RAD_TO_DEG;
 accYangle = (atan2(ax, az) + PI) * RAD_TO_DEG;
-
 double gyroXrate = (double)gx / 131.0;
 double gyroYrate = -((double)gy / 131.0);
-gyroXangle += gyroXrate * ((double)(micros() - timer) / 1000000); // Calculate gyro angle without any filter
-gyroYangle += gyroYrate * ((double)(micros() - timer) / 1000000);
-//gyroXangle += kalmanX.getRate()*((double)(micros()-timer)/1000000); // Calculate gyro angle using the unbiased rate
-//gyroYangle += kalmanY.getRate()*((double)(micros()-timer)/1000000);
-
-compAngleX = (0.93 * (compAngleX + (gyroXrate * (double)(micros() - timer) / 1000000))) + (0.07 * accXangle); // Calculate the angle using a Complimentary filter
-compAngleY = (0.93 * (compAngleY + (gyroYrate * (double)(micros() - timer) / 1000000))) + (0.07 * accYangle);
-
-
+gyroXangle += gyroXrate * deltaTimer / 1000000; // Calculate gyro angle without any filter
+gyroYangle += gyroYrate * deltaTimer / 1000000;
+compAngleX = (0.93 * (compAngleX + (gyroXrate * deltaTimer / 1000000))) + (0.07 * accXangle); // Calculate the angle using a Complimentary filter
+compAngleY = (0.93 * (compAngleY + (gyroYrate * deltaTimer / 1000000))) + (0.07 * accYangle);
+kalAngleX = compAngleX - 170;
+kalAngleY = compAngleY -181;
 timer = micros();
-
-temp = ((double)tempRaw + 12412.0) / 340.0;
-kalAngleX = compAngleX;
-kalAngleY = compAngleY;
-kalAngleX += 3;
-kalAngleY -= 1;
-kalAngleX -= 180;
-kalAngleY -= 180; 
 }
 
 
@@ -157,8 +148,9 @@ void pid(double time, double minSpeed, double xAngle,double yAngle){
   updateAngles();
   int lastX = xAngle-kalAngleX;
   int lastY = yAngle-kalAngleY;
-  double errorX,errorY,pidX,pidY,a,b,c,d;
+  double errorX,errorY,pidX,pidY,a,b,c,d, deltaMicros;
  while((millis()-start) < (time * 1000)){
+   if(accelgyro.testConnection()){
 updateAngles();
 
 
@@ -166,24 +158,33 @@ updateAngles();
  errorY = yAngle-kalAngleY;
 sumIX += errorX * ki;
 sumIY += errorY * ki;
- pidX = errorX * kp + sumIX*((micros()-lastTime) / 1000) - (errorX - lastX)/((micros()-lastTime) / 1000) *kd;
- pidY = errorY * kp + sumIY*((micros()-lastTime) / 1000) - (errorY - lastY)/((micros()-lastTime) / 1000) *kd;
+deltaMicros = micros()-lastTime;
+ pidX = errorX  * kp + sumIX*deltaMicros - ((errorX - lastX)/deltaMicros) *kd;
+ pidY = errorY*  kp + sumIY*deltaMicros - ((errorY - lastY)/deltaMicros) *kd;
+ if(errorY > 13 || errorY < -13){
+     //pidY += errorX * 1; 
+ }
  a = minSpeed - pidY;
  b = minSpeed + pidX;
  c = minSpeed + pidY;
  d = minSpeed - pidX;
+    
+    if (a < minSpeed){
+        a = minSpeed;
+    }else{
+     c = minSpeed; 
+    }
 
-
-if (kalAngleY > 100 || kalAngleY < -100 || kalAngleX > 100 || kalAngleX < -100){
+//if ((kalAngleY > 100 || kalAngleY < -100 || kalAngleX > 100 || kalAngleX < -100) /*|| accelgyro.testConnection()*//*adds 500 micros*/){
   //turnOff();
   //return;
-}
+//}
 //Serial.print("A:");
 //Serial.print(a);Serial.print("\t");
 writeA(a);
 //Serial.print("B:");
 //Serial.print(b);Serial.print("\t");
-//writeB(b);
+writeB(b);
 //Serial.print("C:");
 //Serial.print(c);Serial.print("\t");
 writeC(c);
@@ -192,20 +193,22 @@ writeC(c);
 //Serial.print(kalAngleX);Serial.println("\t");
 //Serial.println(kalAngleY);
 
-//writeD(d);
-//Serial.print(temp);Serial.print("\t");
+writeD(d);
 
   
-//minSpeed-=(1.0/time*(minSpeed-20)/100.0);//Decreases the motors speed in relation to time and minSpeed
-
-Serial.println(micros()-lastTime);
-
+//Serial.println(kalAngleY);
+Serial.println(deltaMicros);
 lastX = errorX;
 lastY = errorY;
 lastTime = micros();
+
 /*Serial.print("minSpeed: ");
 Serial.println(minSpeed);*/
-
+   }
+   else{
+    turnOff();
+   return; 
+   }
 }
 }
 
