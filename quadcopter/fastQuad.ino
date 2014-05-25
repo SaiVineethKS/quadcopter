@@ -1,28 +1,43 @@
 #define Pu 2.7e6
-#define kp 1/8//1/5//37.5//0.044
-#define ki 1/500000000//kp*1/Pu//0.000000001//1/900000
-#define kd 1/10//1/10//3000
-
+#define kp 1/15.5///1/5//37.5//0.044 18
+#define ki 0//1/100//kp*1/Pu//0.000000001//1/900000
+#define kd 1/80//-1/20//1/10//3000
+//p - 1/13.5
 
 
 #include "I2Cdev.h"
 #include "MPU6050.h"
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
   #include "Wire.h"
+  
+  #include <VirtualWire.h>
+#include<String>
+
+
 #endif
 MPU6050 accelgyro;
 double lastTime, timer, temp, tempRaw, deltaTimer;
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
 double accXangle, accYangle, gyroXangle, gyroYangle, kalAngleX, kalAngleY, compAngleX, compAngleY;
+int minSpeed = 24;
+//Communication
+byte stringmessage[VW_MAX_MESSAGE_LEN]; // a buffer to store the incoming messages
+byte stringmessageLength = VW_MAX_MESSAGE_LEN; // the size of the message
+//End of com
 
 void setup() {
+  //Serial.begin(9600);
+//Serial.println("Device is ready");
+vw_setup(2000); // Bits per sec
+vw_rx_start(); // Start the receiver
+
    lastTime = micros();  
    timer = micros();
    initStuff();
    updateAngles();
    arm();
-   pid(5, 24, 0, 0);
+   pid(50, 0, 0);//Time/Angles
   turnOff();
 }
 
@@ -32,8 +47,32 @@ void loop() {/*
     //Serial.println((micros()-lastTime));
     lastTime = micros();
     */
+    
 }
+void com()//Recieve data!
+{
+  //Serial.println("asfd");
+  String str="";
+  char stringm;
+  int num;
+if (vw_get_message(stringmessage, &stringmessageLength)) // Non-blocking
+{
+  
+Serial.print("Received: ");
+for (int i = 0; i < stringmessageLength; i++)
+{
+stringm= (char)stringmessage[i];
+Serial.print(stringm);
+str += stringm;
+}
+num=str.toInt();
+minSpeed = num;
+Serial.println(num);
 
+str="";
+
+}
+}
 
 void initStuff(){
    // join I2C bus (I2Cdev library doesn't do this automatically)
@@ -141,7 +180,8 @@ timer = micros();
 
 
 
-void pid(double time, double minSpeed, double xAngle,double yAngle){
+void pid(double time, double xAngle,double yAngle){
+  
   int start = millis();
   double sumIX = 0;
   double sumIY = 0;
@@ -152,8 +192,7 @@ void pid(double time, double minSpeed, double xAngle,double yAngle){
  while((millis()-start) < (time * 1000)){
    if(accelgyro.testConnection()){
 updateAngles();
-
-
+com();//Get DATA
  errorX = xAngle-kalAngleX;
  errorY = yAngle-kalAngleY;
 sumIX += errorX * ki;
@@ -161,9 +200,9 @@ sumIY += errorY * ki;
 deltaMicros = micros()-lastTime;
  pidX = errorX  * kp + sumIX*deltaMicros - ((errorX - lastX)/deltaMicros) *kd;
  pidY = errorY*  kp + sumIY*deltaMicros - ((errorY - lastY)/deltaMicros) *kd;
- if(errorY > 13 || errorY < -13){
+ //if(errorY > 13 || errorY < -13){
      //pidY += errorX * 1; 
- }
+ //}
  a = minSpeed - pidY;
  b = minSpeed + pidX;
  c = minSpeed + pidY;
@@ -171,8 +210,9 @@ deltaMicros = micros()-lastTime;
     
     if (a < minSpeed){
         a = minSpeed;
+        
     }else{
-     c = minSpeed; 
+     c = minSpeed; //asd,jkhasdkhszckjsahkausjdlhj
     }
 
 //if ((kalAngleY > 100 || kalAngleY < -100 || kalAngleX > 100 || kalAngleX < -100) /*|| accelgyro.testConnection()*//*adds 500 micros*/){
@@ -192,9 +232,8 @@ writeC(c);
 //Serial.print(d);Serial.println("\t");
 //Serial.print(kalAngleX);Serial.println("\t");
 //Serial.println(kalAngleY);
-
 writeD(d);
-
+//Serial.println(a);
   
 //Serial.println(kalAngleY);
 Serial.println(deltaMicros);
@@ -211,5 +250,4 @@ Serial.println(minSpeed);*/
    }
 }
 }
-
 
