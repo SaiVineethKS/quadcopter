@@ -1,7 +1,7 @@
 #define Pu 2.7e6
-#define kp 1/15.5///1/5//37.5//0.044 18
+#define kp 1/15.5//1/9//1/5//37.5//0.044 18
 #define ki 0//1/100//kp*1/Pu//0.000000001//1/900000
-#define kd 1/80//-1/20//1/10//3000
+#define kd 0//d1/80//1/20//1/20//1/80//-1/20//1/10//3000
 //p - 1/13.5
 
 
@@ -37,7 +37,7 @@ vw_rx_start(); // Start the receiver
    initStuff();
    updateAngles();
    arm();
-   pid(50, 0, 0);//Time/Angles
+   pid(10, 0, 0);//Time/Angles
   turnOff();
 }
 
@@ -49,7 +49,7 @@ void loop() {/*
     */
     
 }
-void com()//Recieve data!
+boolean com()//Recieve data!
 {
   //Serial.println("asfd");
   String str="";
@@ -64,13 +64,17 @@ for (int i = 0; i < stringmessageLength; i++)
 stringm= (char)stringmessage[i];
 Serial.print(stringm);
 str += stringm;
+
 }
 num=str.toInt();
 minSpeed = num;
 Serial.println(num);
-
+if(num==0)
+{
+  return false;
+}
 str="";
-
+return true;
 }
 }
 
@@ -192,7 +196,12 @@ void pid(double time, double xAngle,double yAngle){
  while((millis()-start) < (time * 1000)){
    if(accelgyro.testConnection()){
 updateAngles();
-com();//Get DATA
+/*if(!com())
+{
+  turnOff();
+  return;
+}*/
+//Get DATA
  errorX = xAngle-kalAngleX;
  errorY = yAngle-kalAngleY;
 sumIX += errorX * ki;
@@ -224,7 +233,7 @@ deltaMicros = micros()-lastTime;
 writeA(a);
 //Serial.print("B:");
 //Serial.print(b);Serial.print("\t");
-writeB(b);
+//writeB(b);
 //Serial.print("C:");
 //Serial.print(c);Serial.print("\t");
 writeC(c);
@@ -232,11 +241,11 @@ writeC(c);
 //Serial.print(d);Serial.println("\t");
 //Serial.print(kalAngleX);Serial.println("\t");
 //Serial.println(kalAngleY);
-writeD(d);
+//writeD(d);
 //Serial.println(a);
   
-//Serial.println(kalAngleY);
-Serial.println(deltaMicros);
+Serial.println(a);
+//Serial.println(deltaMicros);
 lastX = errorX;
 lastY = errorY;
 lastTime = micros();
