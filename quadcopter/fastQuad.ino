@@ -1,7 +1,7 @@
 #define Pu 2.7e6
-#define kp 1/15.5//1/9//1/5//37.5//0.044 18
-#define ki 0//1/100//kp*1/Pu//0.000000001//1/900000
-#define kd 0//d1/80//1/20//1/20//1/80//-1/20//1/10//3000
+#define kp 1/21//1/9//1/5//37.5//0.044 18
+#define ki 1/100000000//1/100//kp*1/Pu//0.000000001//1/900000
+#define kd -3000//d1/80//1/20//1/20//1/80//-1/20//1/10//3000
 //p - 1/13.5
 
 
@@ -37,7 +37,7 @@ vw_rx_start(); // Start the receiver
    initStuff();
    updateAngles();
    arm();
-   pid(10, 0, 0);//Time/Angles
+   pid(10000, 0, 0);//Time/Angles
   turnOff();
 }
 
@@ -196,11 +196,12 @@ void pid(double time, double xAngle,double yAngle){
  while((millis()-start) < (time * 1000)){
    if(accelgyro.testConnection()){
 updateAngles();
-/*if(!com())
+if(!com())
 {
-  turnOff();
+  Serial.println("Hello");
+  //turnOff();
   return;
-}*/
+}
 //Get DATA
  errorX = xAngle-kalAngleX;
  errorY = yAngle-kalAngleY;
@@ -229,13 +230,13 @@ deltaMicros = micros()-lastTime;
   //return;
 //}
 //Serial.print("A:");
-//Serial.print(a);Serial.print("\t");
+Serial.print(a);Serial.print("\t");
 writeA(a);
 //Serial.print("B:");
 //Serial.print(b);Serial.print("\t");
 //writeB(b);
 //Serial.print("C:");
-//Serial.print(c);Serial.print("\t");
+Serial.print(c);Serial.println("\t");
 writeC(c);
 //Serial.print("D:");
 //Serial.print(d);Serial.println("\t");
@@ -244,7 +245,7 @@ writeC(c);
 //writeD(d);
 //Serial.println(a);
   
-Serial.println(a);
+//Serial.println(a);
 //Serial.println(deltaMicros);
 lastX = errorX;
 lastY = errorY;
